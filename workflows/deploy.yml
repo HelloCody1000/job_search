@@ -1,0 +1,58 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Backend Tests
+        run: npm test
+
+  deploy-backend:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install AWS CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli
+
+      - name: Package and Deploy Lambda
+        run: |
+          zip -r lambda.zip backend/
+          aws s3 cp lambda.zip s3://your-bucket/lambda.zip
+          aws lambda update-function-code --function-name jobSearchLambda --s3-bucket your-bucket --s3-key lambda.zip
+
+  deploy-frontend:
+    needs: deploy-backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
+      - name: Deploy to S3
+        run: |
+          aws s3 sync frontend/build/ s3://your-frontend-bucket --acl public-read
+
+      - name: Invalidate CloudFront Cache
+        run: |
+          aws cloudfront create-invalidation --distribution-id YOUR_CLOUDFRONT_ID --paths "/*"

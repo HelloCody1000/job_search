@@ -1,0 +1,2 @@
+Current status
+Working on trying to get connection to the dev website. Once done will move on to cicd pipeline
