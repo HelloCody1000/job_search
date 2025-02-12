@@ -1,0 +1,6 @@
+ Step 1: Define Features & API Endpoints
+ Step 2: Set Up GitHub Repo & CI/CD
+ Step 3: Build AWS Lambda Backend
+ Step 4: Create DynamoDB Database
+ Step 5: Build React Frontend
+ Step 6: Deploy & Monitor
