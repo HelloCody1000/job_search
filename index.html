@@ -1,9 +1,20 @@
-<!DOCTYPE html>
-<html>
-<body>
+<!doctype html>
+<meta charset="utf-8">
+<title>JobWatch — Hello World</title>
 
-<h1>My First Heading testing pipeline invalidating cloudfont</h1>
-<p>My first paragraph.</p>
+<h1>JobWatch — Hello World</h1>
+<p id="last">Loading…</p>
+<pre id="out" style="white-space: pre-wrap;"></pre>
 
-</body>
-</html> 
+<script>
+(async () => {
+  try {
+    const res = await fetch("status/index.json", { cache: "no-store" });
+    const j = await res.json();
+    document.getElementById("last").textContent = "Last update: " + j.generatedAt;
+    document.getElementById("out").textContent  = JSON.stringify(j, null, 2);
+  } catch (e) {
+    document.getElementById("last").textContent = "Failed to load status.";
+  }
+})();
+</script>
