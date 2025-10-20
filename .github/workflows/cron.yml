@@ -1,7 +1,7 @@
 name: Update status
 on:
   schedule:
-    - cron: "*/5 * * * *"   # every 5 min for demo
+    - cron: "0 */12 * * *"   # every 12 hrs for demo
   workflow_dispatch:         # lets you trigger it manually
 
 jobs:
