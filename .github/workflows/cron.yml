@@ -10,7 +10,7 @@ jobs:
     permissions: { contents: read }
     env:
       AWS_REGION: us-east-1            # change if needed
-      S3_BUCKET: otakugraphics-dev.com     # replace with your real bucket
+      S3_BUCKET: jobclickhire-dev.com     # replace with your real bucket
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
