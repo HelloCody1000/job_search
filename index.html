@@ -1,20 +1,160 @@
 <!doctype html>
-<meta charset="utf-8">
-<title>JobWatch — Hello World</title>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>JobWatch — Tracked Companies</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --bg:#0f172a; --card:#111827; --muted:#9ca3af; --text:#e5e7eb; --accent:#22c55e; --danger:#ef4444; --line:#1f2937;
+    }
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+    .wrap{max-width:1100px;margin:40px auto;padding:0 16px}
+    h1{font-weight:700;margin:0 0 8px}
+    .sub{color:var(--muted);margin:0 0 20px;font-size:14px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+    table{width:100%;border-collapse:collapse}
+    thead th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+    tbody td{padding:14px 12px;vertical-align:top;border-bottom:1px solid var(--line)}
+    tbody tr:last-child td{border-bottom:none}
+    .url a{color:var(--text);text-decoration:none}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid var(--line);background:#0b1324}
+    .badge.ok{border-color:#1f7a43;color:#a7f3d0}
+    .badge.warn{border-color:#7a2a1f;color:#fecaca}
+    .date{font-variant-numeric:tabular-nums;color:var(--muted)}
+    .notes{display:flex;gap:8px;align-items:flex-start}
+    .notes textarea{width:100%;min-height:60px;background:#0b1324;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
+    .btn{border:1px solid var(--line);background:#0b1324;color:var(--text);padding:8px 10px;border-radius:8px;cursor:pointer}
+    .btn:hover{border-color:#334155}
+    .delbox{transform:scale(1.2)}
+    .marked{color:var(--danger);font-size:12px;margin-top:6px}
+    .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .small{font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Tracked Companies</h1>
+    <p class="sub">Add/remove and annotate companies. Deletions are <em>marked</em> here; you’ll wire the actual API call next.</p>
 
-<h1>JobWatch — Hello World</h1>
-<p id="last">Loading…</p>
-<pre id="out" style="white-space: pre-wrap;"></pre>
+    <div class="card">
+      <div class="toolbar">
+        <div class="small">Last dashboard refresh: <span id="refreshedAt"></span></div>
+        <div class="small">Items: <span id="count">0</span></div>
+      </div>
+
+      <table aria-label="Tracked companies">
+        <thead>
+          <tr>
+            <th style="width:18ch;">Company</th>
+            <th>URL</th>
+            <th style="width:16ch;">Status</th>
+            <th style="width:18ch;">Last Posted</th>
+            <th style="width:10ch;">Delete</th>
+            <th style="width:34%;">Notes</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
 
 <script>
-(async () => {
-  try {
-    const res = await fetch("status/index.json", { cache: "no-store" });
-    const j = await res.json();
-    document.getElementById("last").textContent = "Last update: " + j.generatedAt;
-    document.getElementById("out").textContent  = JSON.stringify(j, null, 2);
-  } catch (e) {
-    document.getElementById("last").textContent = "Failed to load status.";
+/* ---------- TEMP DATA (replace with fetch from your API later) ---------- */
+const sampleSites = [
+  {
+    siteId: "acme-gh",
+    company: "Acme Corp",
+    url: "https://boards.greenhouse.io/acme",
+    status: "Openings posted", // or "No updates"
+    lastPosted: "2025-10-18",
+    note: ""
+  },
+  {
+    siteId: "contoso-wd",
+    company: "Contoso",
+    url: "https://contoso.wd5.myworkdayjobs.com/ContosoCareers",
+    status: "No updates",
+    lastPosted: "2025-10-14",
+    note: ""
   }
-})();
+];
+// On first load, prefer whatever is in localStorage so your notes persist during testing.
+const STORE_KEY = "jobwatch-sites-v1";
+const sites = JSON.parse(localStorage.getItem(STORE_KEY) || "null") || sampleSites;
+
+/* ---------- RENDER ---------- */
+const tbody = document.getElementById("rows");
+const countEl = document.getElementById("count");
+document.getElementById("refreshedAt").textContent = new Date().toLocaleString();
+
+function statusBadge(text){
+  const ok = /open|posted|new/i.test(text);
+  return `<span class="badge ${ok ? 'ok' : 'warn'}">${text}</span>`;
+}
+
+function render(){
+  tbody.innerHTML = "";
+  for(const s of sites){
+    const tr = document.createElement("tr");
+    tr.dataset.id = s.siteId;
+
+    tr.innerHTML = `
+      <td><strong>${escapeHtml(s.company || "")}</strong></td>
+      <td class="url"><strong><a href="${encodeURI(s.url)}" target="_blank" rel="noreferrer noopener">${escapeHtml(s.url)}</a></strong></td>
+      <td>${statusBadge(s.status || "No updates")}</td>
+      <td><span class="date">${escapeHtml(s.lastPosted || "—")}</span></td>
+      <td>
+        <label>
+          <input type="checkbox" class="delbox" ${s.markedDelete ? "checked": ""} />
+        </label>
+        <div class="marked" style="${s.markedDelete ? "" : "display:none"}">Marked for deletion</div>
+      </td>
+      <td>
+        <div class="notes">
+          <textarea placeholder="Add a note for this company...">${escapeHtml(s.note || "")}</textarea>
+          <button class="btn save">Save</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+  countEl.textContent = sites.length;
+}
+render();
+
+/* ---------- EVENTS (local only; wire to backend later) ---------- */
+tbody.addEventListener("change", (e) => {
+  if(!e.target.classList.contains("delbox")) return;
+  const tr = e.target.closest("tr");
+  const id = tr.dataset.id;
+  const item = sites.find(x => x.siteId === id);
+  item.markedDelete = e.target.checked;
+  tr.querySelector(".marked").style.display = item.markedDelete ? "" : "none";
+  persist();
+});
+
+tbody.addEventListener("click", (e) => {
+  if(!e.target.classList.contains("save")) return;
+  const tr = e.target.closest("tr");
+  const id = tr.dataset.id;
+  const item = sites.find(x => x.siteId === id);
+  const ta = tr.querySelector("textarea");
+  item.note = ta.value;
+  persist();
+  e.target.textContent = "Saved";
+  setTimeout(() => (e.target.textContent = "Save"), 1000);
+});
+
+/* ---------- Helpers ---------- */
+function persist(){
+  localStorage.setItem(STORE_KEY, JSON.stringify(sites));
+}
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, s => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[s]));
+}
 </script>
+</body>
+</html>
