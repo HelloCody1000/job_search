@@ -1,18 +1,21 @@
 name: Update status
 on:
+  push:
+    branches: [ main ]         # optional but handy: run on git push
   schedule:
-    - cron: "0 */12 * * *"   # every 12 hrs for demo
-  workflow_dispatch:         # lets you trigger it manually
+    - cron: "0 */12 * * *"     # every 12 hours UTC
+  workflow_dispatch:            # allow manual runs from the Actions tab
 
 jobs:
   update:
     runs-on: ubuntu-latest
     permissions: { contents: read }
     env:
-      AWS_REGION: us-east-1            # change if needed
-      S3_BUCKET: jobclickhire-dev.com     # replace with your real bucket
+      AWS_REGION: us-east-1
+      S3_BUCKET: jobclickhire-dev.com   # must match your actual bucket name
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with: { node-version: "20" }
 
